@@ -86,7 +86,9 @@ export async function verifyCompliance({
       contract_address: contractAddress,
       user_address: userAddress,
     },
-    { encrypted: false },
+    // Retried: this read backs the dashboard, and a transient timeout would otherwise be
+    // indistinguishable from a genuine denial.
+    { encrypted: false, retries: 2 },
   );
 }
 

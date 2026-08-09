@@ -122,7 +122,7 @@ export async function queryApass(
     return await cleanverseRequest<ApassRecord>(
       "/query_apass",
       { chain: resolved, address: walletAddress },
-      { encrypted: false },
+      { encrypted: false, retries: 2 },
     );
   } catch (error) {
     if (error instanceof CleanverseApiError && /apass not found/i.test(error.message)) {

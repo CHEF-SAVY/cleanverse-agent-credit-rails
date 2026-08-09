@@ -68,6 +68,14 @@ export interface RequestOptions {
   timeoutMs?: number;
   config?: CleanverseConfig;
   signal?: AbortSignal;
+  /**
+   * Retry attempts on **transport** failure (timeout, DNS, connection reset). Never on an API
+   * error response — a `0002` means Cleanverse understood us and said no.
+   *
+   * Safe only for idempotent reads. A retried write could apply twice on-chain, so this stays 0
+   * for anything that mutates. See docs/backend-integration-plan.md §2.7.
+   */
+  retries?: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
@@ -81,6 +89,28 @@ function looksLikeCiphertext(data: unknown): data is string {
 }
 
 export async function cleanverseRequest<TResponse, TRequest = unknown>(
+  endpoint: string,
+  body: TRequest,
+  options: RequestOptions,
+): Promise<TResponse> {
+  const attempts = Math.max(0, options.retries ?? 0) + 1;
+  let lastTransportError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await sendOnce<TResponse, TRequest>(endpoint, body, options);
+    } catch (error) {
+      // Only transport failures are retryable; an API error is a real answer.
+      if (!(error instanceof CleanverseTransportError) || attempt === attempts - 1) throw error;
+      lastTransportError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+    }
+  }
+
+  throw lastTransportError;
+}
+
+async function sendOnce<TResponse, TRequest>(
   endpoint: string,
   body: TRequest,
   options: RequestOptions,

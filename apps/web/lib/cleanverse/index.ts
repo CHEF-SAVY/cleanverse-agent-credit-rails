@@ -19,5 +19,6 @@ export * from "./bands";
 export * from "./onboarding";
 export * from "./validator";
 export * from "./pools";
+export * from "./eligibility";
 export * from "./tokens";
 export * from "./reporting";
