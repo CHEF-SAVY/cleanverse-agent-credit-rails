@@ -40,9 +40,40 @@ detour: **`generate_apass` binds a pass to an address, and nothing in v5.6 says 
 be an EOA.** If a contract address can be issued a pass, we simply onboard our own contracts as
 part of deployment.
 
-**Untested and next:** issue an A-Pass to a contract address and re-run `canTransfer`. That is a
-write which mints real identity in the sandbox, so it needs an explicit go-ahead rather than being
-folded into a read-only check. If it fails, fall back to §0.1 option 3 (denominate in origin USDC).
+### ✅ Resolved — a contract *can* hold an A-Pass
+
+Tested end-to-end on Monad testnet. Deployed a minimal contract
+(`0x550c28Ec54A89e430887230C07C34FECc3F590Cf`), confirmed it was refused, onboarded it through
+`POST /api/admin/apass`, and re-ran the same check:
+
+| Recipient | Before | After |
+|---|---|---|
+| our contract | `NoAPass` | **`canTransfer → true`** |
+| unonboarded EOA (control) | `NoAPass` | `NoAPass` |
+
+The control is the point: only the onboarded address changed, so the pass is what moved it.
+
+**Consequence for deployment:** after `forge script Deploy`, `CreditPool` and `JobEscrow` must each
+be onboarded before any asset can move. That is now a required deploy step, not an optional one,
+and it is why `ensureApass` exists as a library function rather than living inside a route.
+
+### ⚠️ Surprise worth acting on: a fresh A-Pass is issued at **tier 50**
+
+The pass minted for our test contract came back `tier: "50"`, `subTier: 0`, no group, no countries.
+We do not choose the tier — Cleanverse assigns it. If 50 is the default for every pass we mint,
+then **band-1 (20) and band-2 (50) are both automatically satisfied by anyone we onboard**, and
+only band-3 (80) discriminates. The tiering demo would be flat.
+
+Two ways out, and this needs a decision:
+
+1. **Differentiate on `subTier` instead.** We *can* set `subTier` at `generate_apass` (1–99), and
+   `RuleV2` has `minSubTier`. Bands become `minTier 50 + minSubTier {0, 40, 80}`. Fully under our
+   control, works today.
+2. **Ask Cleanverse to issue passes at varied tiers** for the demo accounts. More faithful to the
+   real product, entirely dependent on them.
+
+Option 1 is the safe build; option 2 is the better story. They are not mutually exclusive — bands
+can require both a `minTier` and a `minSubTier`, since fields within one `RuleV2` are ANDed.
 
 *Original analysis, kept for the reasoning:*
 

@@ -15,6 +15,7 @@ export * from "./client";
 export * from "./crypto";
 export * from "./signature";
 export * from "./apass";
+export * from "./onboarding";
 export * from "./validator";
 export * from "./tokens";
 export * from "./reporting";
