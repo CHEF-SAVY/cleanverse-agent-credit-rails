@@ -1,7 +1,6 @@
 # Backend integration — objectives, standards, and plan
 
-Owner: Claude (contracts + backend). Written 2026-08-09, after the REST client landed and was
-verified live against the UAT sandbox.
+Written 2026-08-09, after the REST client landed and was verified live against the UAT sandbox.
 
 This document answers three questions in order: **what the backend must achieve**, **what "done
 properly" means for an integration of this shape**, and **the concrete sequence to get there**.
