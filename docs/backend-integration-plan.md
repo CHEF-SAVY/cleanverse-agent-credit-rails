@@ -9,7 +9,44 @@ answer before the remaining work is worth doing.
 
 ---
 
-## 🚨 0. The risk that outranks the plan: can a *contract* hold aUSDC?
+## ✅ 0. ANSWERED 2026-08-09 — contracts are gated exactly like wallets
+
+**Tested on-chain, not asked.** aUSDC's `_update` hook calls
+`policy.canTransfer(token, from, to, amount)`; the policy for aUSDC on Monad is
+`0x36489bE45fa84f70a0c2BDB11D824Be608CB12Dd` (from `aUSDC.policy()`). Calling `canTransfer`
+directly with `from = address(0)` isolates the recipient check, and the results are unambiguous:
+
+| Recipient | Result |
+|---|---|
+| EOA without an A-Pass | reverts `NoAPass(0xC2Ce…)` |
+| **a contract** (`0x8F11…`) | reverts **`NoAPass(0x8F11…)`** |
+| the aUSDC contract itself | reverts `NoAPass(0xaC08…)` |
+
+Selector `0xa6725971` confirmed as `NoAPass(address)`. **Being a contract grants no exemption.**
+
+The rule aUSDC actually enforces, read from the policy — `getRulesV2(aUSDC)`:
+
+```
+allowedGroup 0x0000, allowedSubGroup 0x0000, minTier 5, minSubTier 0, countryBitmap 0
+```
+
+So: **any address receiving aUSDC needs an A-Pass of tier ≥ 5.** No group or country constraint.
+
+### What this means
+
+`CreditPool`, `JobEscrow`, and every buyer/seller wallet must each hold an A-Pass, or every
+transfer reverts. The likely fix is straightforward and does not require the self-issued-token
+detour: **`generate_apass` binds a pass to an address, and nothing in v5.6 says that address must
+be an EOA.** If a contract address can be issued a pass, we simply onboard our own contracts as
+part of deployment.
+
+**Untested and next:** issue an A-Pass to a contract address and re-run `canTransfer`. That is a
+write which mints real identity in the sandbox, so it needs an explicit go-ahead rather than being
+folded into a read-only check. If it fails, fall back to §0.1 option 3 (denominate in origin USDC).
+
+*Original analysis, kept for the reasoning:*
+
+## 🚨 0.1 The risk as first identified: can a *contract* hold aUSDC?
 
 A-Token transfers are **recipient-gated** — v5.6 is explicit that compliance rules
 *"determine whether a wallet is allowed to receive/transfer this A-Token"*, and `verify_apass`
@@ -188,7 +225,10 @@ Band design (matching `Deploy.s.sol`'s existing limits):
 | band-2 | 50 | 2,500 aUSDC | enhanced KYC |
 | band-3 | 80 | 10,000 aUSDC | institutional |
 
-The exact tier thresholds are a **product decision that needs Isaac's sign-off**, and they are the
+**Confirmed 2026-08-09.** Note these all sit above aUSDC's own `minTier 5` floor, so anyone who
+qualifies for credit can also legally hold the asset — the two rule sets do not contradict.
+
+The tier thresholds are the
 single best live-demo beat in the project: raising `band-2`'s `min_tier` via `set_rule` visibly
 drops an agent's credit limit on the dashboard with no redeploy, because the rule lives on
 Cleanverse. That is the 30-point category made tangible in about fifteen seconds.
@@ -243,9 +283,10 @@ Step 5 is the differentiator. Steps 1–4 are table stakes; a judge has seen the
 
 ## 5. Open decisions needing Isaac
 
-1. **Tier thresholds** for the three bands (§3 Phase B) — product judgement, affects the demo.
-2. **Self-issued Wrapped A-Token?** If §0 resolves to option 2, we would issue our own
-   compliance-gated token. Higher rubric ceiling (we would own the rule set on the asset *and* the
-   pool), materially more moving parts, and it is a one-way door mid-hackathon.
-3. **Does the buyer wallet get an A-Pass in the demo?** Recipient gating says it must, if the
-   buyer ever receives aUSDC. This changes the demo script and the onboarding flow.
+1. ~~**Tier thresholds**~~ — **decided: 20 / 50 / 80.**
+2. **Go-ahead to issue an A-Pass to a contract address** (§0). This is the test that decides
+   whether the pool can be denominated in a real A-Token at all. It is a write that mints identity
+   in the sandbox, hence not run unprompted.
+3. **Everyone in the demo needs an A-Pass** — buyer, seller, and the contracts. This is now a
+   certainty rather than a question, and it expands onboarding from "the agent operator" to
+   "every address that touches money".
