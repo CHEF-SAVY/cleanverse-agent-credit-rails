@@ -57,17 +57,64 @@ Validator Compliance is Issue-Member-only. Gateway Member would let `generate_ap
 `query_apass` succeed and then fail us at `validator/grant` / `register` — late, and during the
 demo. Worth confirming before we build against it rather than discovering it at 3am.
 
-### Q3. Is a testnet A-Token actually reachable on Monad, and what is AUSDC's address there?
+### ~~Q3. Is a testnet A-Token actually reachable on Monad?~~ ✅ ANSWERED OURSELVES
 
-`ASSET_ADDRESS` is unset and blocks deploy. The documented route is
-`POST /query_supported_atoken_list` (we can now call this ourselves with the api-id), then
-`POST /query_deposit_address` + the Circle faucet at https://faucet.circle.com to actually receive
-AUSDC. Confirming this works end-to-end on Monad testnet is the remaining unknown — it's also
-what lets the pool be denominated in a **real** A-Token instead of a mock.
+**Resolved 2026-08-09 by live API call — see §3 below. `ASSET_ADDRESS` is now set.**
 
 ---
 
-## 3. Answered from the docs — no need to ask
+## 3. Answered by live API calls, 2026-08-09
+
+Credentials work. Two read-only calls against the UAT sandbox (`api-id` only, no api-key
+transmitted — both endpoints are plain JSON, not AES).
+
+### ✅ Monad is fully supported at the A-Token layer. aUSDC is real and live.
+
+`POST /query_deposit_atoken_list {"chain":"monad"}` → `code 0000`:
+
+| What | Address | Verified |
+|---|---|---|
+| **aUSDC (our `ASSET_ADDRESS`)** | `0xaC0893567D43C3E7e6e35a72803df05416C1f20D` | `symbol() == "aUSDC"`, `decimals() == 6` by `eth_call` on Monad |
+| origin USDC | `0x534b2f3A21130d7a60830c2Df862319e593943A3` | listed as the origin token |
+
+aUSDC is at the **same address on Monad and Base** — a deterministic deploy, which makes the
+"Base is where this deploys next" pitch cheaper than expected. `ASSET_ADDRESS` is now set in
+`contracts/.env`, so that deploy blocker is cleared.
+
+Also discovered: **`POST /faucet`** exists (chain, symbol, depositAddress, amount) and is open to
+all three role tiers. We may not need the Circle faucet at all.
+
+### ⚠️ Endpoint names in CLAUDE.md §5 are wrong — corrected
+
+| CLAUDE.md says | Actually exists |
+|---|---|
+| `query_supported_atoken_list` | **`query_deposit_atoken_list`** |
+| `query_transactions` | **`query_txs`** |
+| `query_institution_transactions` | **`query_institution_txs`** |
+
+### 🔶 The validator module answers for `chain: "monad"`
+
+`POST /validator/is_register {"chain":"monad", ...}` → `code 0000`, `registered: false`. It
+accepts Monad as a chain rather than rejecting it, which is good evidence the compliance validator
+**is** deployed there and softens Q1 — but it still doesn't give us the contract address, and
+`is_register` is a read. Q1 and Q2 both stand.
+
+`query_apass` is also reachable (returns a clean "apass not found" for our deployer, as expected).
+
+### ❌ The addresses Cleanverse returns are *not* the validator
+
+The token list also returns `accesscore_address` `0x8F118338a1fa41E7Fa86Be19A4e8B99Ed58A6EcC` and
+`apass_address` `0xbA82D189540CaC9DC6FF46B6837CaC1BFdEC58B9`, identical on Monad and Base. Both
+are live ERC-1967 proxies with real implementations — but **neither answers `complianceVerify`,
+`isRegistered`, or `getRulesV2`**; all three revert with empty data. Our interface signatures were
+checked against the CCP guide and match it exactly, so this isn't a transcription error on our
+side. These are the A-Token engine and the A-Pass registry, not the compliance validator.
+
+**So Q1 cannot be answered by inspection. We still need the address from Cleanverse.**
+
+---
+
+## 4. Answered from the docs — no need to ask
 
 ### ✅ A-Token transfers **are** recipient-gated. This has consequences.
 
@@ -96,7 +143,7 @@ either the API docs or the CCP guides. Use `grant`.
 
 ---
 
-## 4. Not Cleanverse's problem — ours
+## 5. Not Cleanverse's problem — ours
 
 - **Design system blanks** in `CLAUDE.md` §6: colour theme, typography, style references,
   component library, and whether responsive is in scope or the demo is desktop-only. Sunday and
