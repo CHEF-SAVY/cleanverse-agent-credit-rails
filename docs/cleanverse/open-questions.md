@@ -32,7 +32,22 @@ Nothing deploys until this has gas.
 
 ## 2. Questions for Cleanverse — genuinely blocking
 
-### Q1. Where is `IAPassComplianceValidator` deployed, and is Monad among them? 🚨
+### ~~Q1. Where is `IAPassComplianceValidator` deployed?~~ ✅ FOUND IT OURSELVES
+
+**`0xaC7e5179C2C7f03f209136886c172eb34F161792` on Monad testnet (chain 10143).**
+
+Recovered without Cleanverse: `validator/set_rule` returns a `tx_hash`, and that
+transaction is sent *to* the validator. Reading the `to` field off the receipt gives the
+address directly. Verified before trusting it — `isRegistered` returns true for all three
+registered gates, `complianceVerify` reproduces the REST API's verdicts exactly
+(true/true/false for a subTier-40 wallet), and `getRulesV2(band-2)` returns
+`(0x0000, 0x0000, 20, 40, 0)` — our band-2 rule, on the nose.
+
+Monad **is** supported by the on-chain validator, settling the chain conflict too.
+
+*Original question, kept for the reasoning:*
+
+### Q1 (superseded). Where is `IAPassComplianceValidator` deployed? 🚨
 
 **This is the one that can sink the architecture.** We need a `CCP_VALIDATOR_ADDRESS` for
 `Deploy.s.sol`, and it does not exist in anything we've been given:

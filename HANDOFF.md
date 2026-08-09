@@ -17,6 +17,7 @@ Not "written" — **executed against the real Cleanverse sandbox and Monad testn
 | Cleanverse REST client (`apps/web/lib/cleanverse/`) | Complete — AES-256-CBC, all endpoints, typed errors |
 | A-Pass onboarding | Live. **Contracts can hold an A-Pass** (proven) |
 | The 3 credit-band gates | **Deployed and registered on Monad** |
+| CCP validator address | **Recovered and verified** — deploy unblocked |
 | The identity gate | **Proven**: subTier 0 → no credit, 10 → band-1, 80 → all bands |
 | Eligibility API with reasons | Live at `GET /api/operator/[address]` |
 | Live rule tuning | Live, repeatable: 2,500 → 500 → 2,500 aUSDC |
@@ -94,14 +95,22 @@ That is why bands gate on `subTier`, which we set. `countries` *is* real KYC out
 
 ## 4. What is left
 
-### 4.1 Blocked on Cleanverse — chase this first
+### 4.1 ✅ No longer blocked — the validator address was recoverable
 
-**`CCP_VALIDATOR_ADDRESS`.** Needed only for `CreditLine` to call `complianceVerify` on-chain.
-Not in either CCP PDF; `accesscore_address` and `apass_address` are **not** it (both verified to
-revert on the interface). Question drafted in `docs/cleanverse/open-questions.md` §Q1.
+**`CCP_VALIDATOR_ADDRESS=0xaC7e5179C2C7f03f209136886c172eb34F161792`** (Monad testnet).
 
-Until it lands: no `Deploy.s.sol`, so no `CreditPool` / `CreditLine` / `JobEscrow` on chain, so no
-borrowing flow. Everything else works without it.
+Found without Cleanverse: `validator/set_rule` returns a `tx_hash`, and that transaction is sent
+*to* the validator, so the `to` field on any receipt is the address. Verified three ways before
+use — see `contracts/.env` and open-questions §Q1.
+
+**`Deploy.s.sol` is therefore unblocked.** Nothing external is outstanding. Remaining sequence:
+
+1. `forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast`
+   (reuse the three gates already deployed — pass their addresses to `setTierBands`, do not
+   redeploy them)
+2. Onboard `CreditPool` and `JobEscrow` via `POST /api/admin/apass` — **mandatory**, see trap 3
+3. Fund the pool with aUSDC
+4. Run borrow → job → repay end to end for the first time
 
 ### 4.2 Frontend — the immediate work
 
