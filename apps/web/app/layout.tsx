@@ -17,7 +17,7 @@
  */
 
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -28,13 +28,19 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Tripwire — Escrow-Backed Agent Payments",
+  title: "Ledgerline — Identity-Gated Credit for AI Agents",
   description:
-    "Escrow-backed job settlement for agent-to-agent USDC payments on Arc — payment releases only on verified delivery, backed by a slashable seller bond.",
+    "AI agents can pay each other, but nobody will lend to them. Ledgerline binds a KYC'd A-Pass to an agent's operator and issues an under-collateralised credit line whose limit is decided by Cleanverse's on-chain compliance validator — not by us.",
 };
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
+  display: "swap",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   display: "swap",
   subsets: ["latin"],
 });
@@ -46,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${geistSans.className} ${geistMono.variable} antialiased`}>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster richColors position="bottom-right" />
       </body>

@@ -26,31 +26,31 @@
    indirection (bg-background, text-muted-foreground, etc. via @theme inline below), so
    this cascades app-wide with no per-component changes needed. */
 :root {
-  --background: 240 6% 6%;
+  --background: 0 0% 4.3%;
   --foreground: 0 0% 98%;
-  --card: 240 6% 9%;
+  --card: 0 0% 6.5%;
   --card-foreground: 0 0% 98%;
-  --popover: 240 6% 9%;
+  --popover: 0 0% 6.5%;
   --popover-foreground: 0 0% 98%;
-  --primary: 217 91% 60%;
+  --primary: 3 74% 56%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 6% 14%;
+  --secondary: 0 0% 11%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 240 6% 12%;
-  --muted-foreground: 240 5% 65%;
-  --accent: 240 6% 14%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 58%;
+  --accent: 0 0% 11%;
   --accent-foreground: 0 0% 98%;
-  --destructive: 0 84% 60%;
+  --destructive: 3 74% 56%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 6% 18%;
-  --input: 240 6% 18%;
-  --ring: 217 91% 60%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 3 74% 56%;
   --chart-1: 217 91% 60%;
   --chart-2: 0 84% 60%;
   --chart-3: 150.98 75.41% 47.84%;
   --chart-4: 21.9 100% 73.14%;
   --chart-5: 294.95 88.43% 76.27%;
-  --radius: 0.5rem;
+  --radius: 0rem;
 }
 
 @theme inline {
@@ -91,3 +91,113 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design system — "compliance terminal"
+
+   Near-black canvas, one saturated red, hairline rules, and monospace for
+   anything machine-spoken (labels, addresses, verdicts). Display type is set
+   tight and large; body copy stays quiet so the numbers carry the page.
+
+   Corners are square everywhere (--radius: 0). Rounding softens this language.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --color-red: #e2413b;
+  --color-red-bright: #f0554e;
+  --color-ink: #0b0a0a;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  --red: #e2413b;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --frame-max: 1180px;
+}
+
+/* The bordered content column from the reference: a fixed-width frame with
+   visible vertical rules, so every section reads as one continuous document. */
+.frame {
+  max-width: var(--frame-max);
+  margin-inline: auto;
+  border-inline: 1px solid var(--hairline);
+}
+
+/* Machine voice: eyebrows, labels, addresses, verdicts. */
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Display headline: tight tracking, optical weight. */
+.display {
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  font-weight: 500;
+}
+
+/* Hero panel — flat red with a fine horizontal scanline, echoing the reference's
+   printed/CRT texture without an image asset. */
+.hero-red {
+  background-color: var(--red);
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.055) 0px,
+    rgba(0, 0, 0, 0.055) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* Hard-offset shadow on primary actions — the reference's "printed sticker" button. */
+.btn-hard {
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.85);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.btn-hard:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.85);
+}
+.btn-hard:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 rgba(0, 0, 0, 0.85);
+}
+
+/* Ticker strip under the hero. Duplicated content + 50% translation = seamless. */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker 38s linear infinite;
+  will-change: transform;
+}
+
+/* Section entrances. Kept to opacity + a short rise: this page is dense, and
+   anything more emphatic reads as decoration. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.pulse-dot { animation: pulse-dot 1.9s ease-in-out infinite; }
+
+/* Respect the OS setting — motion here is decorative, never load-bearing. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track, .rise, .pulse-dot { animation: none !important; }
+  .btn-hard { transition: none; }
+}
+
+::selection { background: var(--red); color: #fff; }
+
+html { scroll-behavior: smooth; }
