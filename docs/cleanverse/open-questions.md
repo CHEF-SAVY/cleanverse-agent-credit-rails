@@ -51,11 +51,10 @@ be looking at Base instead.
 **Ask:** the deployed address of `IAPassComplianceValidator` on every chain it lives on. If Monad
 testnet is not one of them, say so explicitly.
 
-### Q2. Do we have **Issue Member** role on api-id `APP20260614112550LIDZXM`?
+### ~~Q2. Do we have **Issue Member** role?~~ ✅ ANSWERED BY DOING IT — yes
 
-Validator Compliance is Issue-Member-only. Gateway Member would let `generate_apass` and
-`query_apass` succeed and then fail us at `validator/grant` / `register` — late, and during the
-demo. Worth confirming before we build against it rather than discovering it at 3am.
+Registered all three credit-band gates via `POST /validator/register` on 2026-08-09, which is
+Issue-Member-only. All three succeeded and carry their rules. No need to ask.
 
 ### ~~Q3. Is a testnet A-Token actually reachable on Monad?~~ ✅ ANSWERED OURSELVES
 
