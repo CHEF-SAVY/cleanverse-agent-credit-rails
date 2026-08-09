@@ -20,5 +20,6 @@ export * from "./onboarding";
 export * from "./validator";
 export * from "./pools";
 export * from "./eligibility";
+export * from "./rules";
 export * from "./tokens";
 export * from "./reporting";

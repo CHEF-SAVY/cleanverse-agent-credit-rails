@@ -113,6 +113,30 @@ side. These are the A-Token engine and the A-Pass registry, not the compliance v
 
 ---
 
+## 3b. Worth reporting back to Cleanverse — `is_black_list` does nothing on-chain
+
+Not a blocker for us (we use the allow-list form), but it is a silent failure and they will
+probably want to know.
+
+Setting a validator rule with `is_black_list: true, countries: ["NG"]`:
+
+- `POST /validator/set_rule` returns `0000` and a tx hash
+- the transaction **confirms on-chain**
+- `POST /validator/rules` reads the rule back exactly as submitted
+- and an operator whose A-Pass carries `countries: ["NG"]` **still passes `validator/verify`**
+
+The same band switched to `is_black_list: false, countries: ["GB"]` denies that operator
+immediately, so the country data and the rule plumbing both work — only the deny-list *semantics*
+are absent.
+
+Consistent with `RuleV2.poolCountryBitmap` superseding the legacy pair: a bitwise AND against a
+bitmap of permitted countries expresses an allow-list naturally and a deny-list not at all. The
+API accepting a flag it cannot honour is the problem — an error would be far safer than silence.
+
+Measured on Monad testnet, 2026-08-09.
+
+---
+
 ## 4. Answered from the docs — no need to ask
 
 ### ✅ A-Token transfers **are** recipient-gated. This has consequences.

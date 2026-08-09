@@ -20,8 +20,15 @@
 import { queryApass } from "./apass";
 import { CREDIT_BANDS, type CreditBand } from "./bands";
 import { bandAddressesFromEnv } from "./pools";
-import { isApassUsable, parseTier, ApassStatus, type ApassRecord, type Chain } from "./types";
-import { verifyCompliance } from "./validator";
+import {
+  isApassUsable,
+  parseTier,
+  ApassStatus,
+  type ApassRecord,
+  type Chain,
+  type ComplianceRule,
+} from "./types";
+import { getPoolRules, verifyCompliance } from "./validator";
 
 /** Stable codes. Branch on these; the `message` is for humans and may be reworded freely. */
 export enum EligibilityCode {
@@ -92,7 +99,16 @@ function requirementOf(band: CreditBand) {
  * Ordered by what a user should fix first, and it reports only what it can actually justify —
  * an unexplained denial stays unexplained.
  */
-function explainDenial(band: CreditBand, apass: ApassRecord): Pick<BandVerdict, "code" | "message" | "shortfall"> {
+function explainDenial(
+  band: CreditBand,
+  apass: ApassRecord,
+  /**
+   * The rule **currently live** on Cleanverse, which is not necessarily the band's default —
+   * rules are retuned at runtime, and explaining a denial against a stale definition produces a
+   * confident wrong answer. Falls back to the default only when the live rule can't be read.
+   */
+  liveRule: ComplianceRule,
+): Pick<BandVerdict, "code" | "message" | "shortfall"> {
   const tier = parseTier(apass.tier);
   const subTier = apass.subTier ?? 0;
 
@@ -102,44 +118,44 @@ function explainDenial(band: CreditBand, apass: ApassRecord): Pick<BandVerdict, 
   if (!isApassUsable(apass)) {
     return { code: EligibilityCode.ApassExpired, message: "This A-Pass has expired." };
   }
-  if (tier < band.rule.min_tier) {
+  if (tier < liveRule.min_tier) {
     return {
       code: EligibilityCode.TierTooLow,
-      message: `${band.label} needs KYC tier ${band.rule.min_tier}; this pass is tier ${tier}.`,
-      shortfall: { field: "tier", required: band.rule.min_tier, actual: tier, gap: band.rule.min_tier - tier },
+      message: `${band.label} needs KYC tier ${liveRule.min_tier}; this pass is tier ${tier}.`,
+      shortfall: { field: "tier", required: liveRule.min_tier, actual: tier, gap: liveRule.min_tier - tier },
     };
   }
-  if (subTier < band.rule.min_sub_tier) {
+  if (subTier < liveRule.min_sub_tier) {
     return {
       code: EligibilityCode.SubTierTooLow,
-      message: `${band.label} needs classification ${band.rule.min_sub_tier}; this pass is ${subTier}.`,
+      message: `${band.label} needs classification ${liveRule.min_sub_tier}; this pass is ${subTier}.`,
       shortfall: {
         field: "subTier",
-        required: band.rule.min_sub_tier,
+        required: liveRule.min_sub_tier,
         actual: subTier,
-        gap: band.rule.min_sub_tier - subTier,
+        gap: liveRule.min_sub_tier - subTier,
       },
     };
   }
 
-  const countries = band.rule.countries;
+  const countries = liveRule.countries;
   if (countries.length > 0) {
     const listed = apass.countries.some((c) => countries.includes(c));
-    const blocked = band.rule.is_black_list ? listed : !listed;
+    const blocked = liveRule.is_black_list ? listed : !listed;
     if (blocked) {
       return {
         code: EligibilityCode.CountryNotPermitted,
-        message: band.rule.is_black_list
+        message: liveRule.is_black_list
           ? `${band.label} excludes ${apass.countries.join(", ") || "this jurisdiction"}.`
           : `${band.label} is limited to ${countries.join(", ")}.`,
       };
     }
   }
 
-  if (band.rule.allowed_group && apass.group !== band.rule.allowed_group) {
+  if (liveRule.allowed_group && apass.group !== liveRule.allowed_group) {
     return {
       code: EligibilityCode.GroupMismatch,
-      message: `${band.label} is restricted to group ${band.rule.allowed_group}.`,
+      message: `${band.label} is restricted to group ${liveRule.allowed_group}.`,
     };
   }
 
@@ -210,11 +226,30 @@ export async function evaluateEligibility(
       }
 
       try {
-        const verdict = await verifyCompliance({ contractAddress: gate, userAddress: address, chain });
+        // Both are reads and independent, so they can overlap. The live rule is what a denial
+        // must be explained against.
+        const [verdict, live] = await Promise.all([
+          verifyCompliance({ contractAddress: gate, userAddress: address, chain }),
+          getPoolRules({ contractAddress: gate, chain })
+            .then((r) => r.rules)
+            .catch(() => null),
+        ]);
+
+        // Rules on a pool are ORed, so the operative rule for a denial is the one they came
+        // closest to. With a single rule — our case — this is just that rule.
+        const liveRule = live?.[0] ?? band.rule;
+        const requirement = { minTier: liveRule.min_tier, minSubTier: liveRule.min_sub_tier };
+
         if (verdict.valid) {
-          return { ...base, passed: true, code: EligibilityCode.Qualified, message: `Qualifies for ${band.label}.` };
+          return {
+            ...base,
+            requirement,
+            passed: true,
+            code: EligibilityCode.Qualified,
+            message: `Qualifies for ${band.label}.`,
+          };
         }
-        return { ...base, passed: false, ...explainDenial(band, apass) };
+        return { ...base, requirement, passed: false, ...explainDenial(band, apass, liveRule) };
       } catch (error) {
         // Fails closed, and says so — an outage must never read as approval.
         return {
