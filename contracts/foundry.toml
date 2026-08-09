@@ -1,0 +1,13 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[rpc_endpoints]
+# Monad testnet is the deploy target: Cleanverse supports `monad` (Arc is not on their
+# supported-chain list at all), the Monad UAT pair is confirmed live, and the ERC-8004
+# Identity/Validation registries are deployed at the same canonical 0x8004... addresses here
+# (verified by eth_call against IdentityRegistry.ownerOf on 2026-08-08).
+monad_testnet = "https://testnet-rpc.monad.xyz"
