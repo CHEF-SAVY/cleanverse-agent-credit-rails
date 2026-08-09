@@ -1,0 +1,72 @@
+name: contracts
+
+# The credit stack is the part of this repo where a regression costs real money, so it gets the
+# gate. Runs on every push and PR touching contracts/ — and on changes to this workflow itself,
+# so a broken pipeline can't merge unnoticed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: default
+
+jobs:
+  test:
+    name: build, format, unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      # Formatting first: it's the fastest check and the one most likely to fail, so a
+      # misformatted PR gets its answer in seconds rather than after a full compile.
+      - name: Check formatting
+        run: forge fmt --check
+
+      - name: Build
+        run: forge build --sizes
+
+      # Fork tests are excluded here on purpose — they depend on a public RPC being reachable,
+      # which is not something a PR author can fix. They run in their own job below, where a
+      # network blip reads as "couldn't check" instead of "your change is broken".
+      - name: Unit tests
+        run: forge test --no-match-contract RegistryForkIntegration -vvv
+
+      - name: Lint
+        run: forge lint
+
+  fork:
+    name: fork tests (live Monad registries)
+    runs-on: ubuntu-latest
+    # Advisory, not a merge gate: a failure here means either the public Monad RPC is down or
+    # our assumptions about the live ERC-8004 registries have genuinely drifted. The second is
+    # worth knowing about immediately; the first must not block anyone's PR.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Fork tests
+        run: forge test --match-contract RegistryForkIntegration -vvv
