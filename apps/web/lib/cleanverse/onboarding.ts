@@ -14,7 +14,8 @@
  * and cannot mint a second pass.
  */
 
-import { generateApass, queryApass, toCustomerId } from "./apass";
+import { generateApass, queryApass, toCustomerId, type IdentityData } from "./apass";
+import { getBand, type BandLabel } from "./bands";
 import { getCleanverseConfig } from "./env";
 import { isApassUsable, parseTier, type ApassRecord, type Chain } from "./types";
 
@@ -31,6 +32,19 @@ export interface OnboardArgs {
   kycId?: string;
   subTier?: number;
   subGroup?: string;
+  /**
+   * Identity documents backing the pass. Real onboarding submits these; Cleanverse derives
+   * `countries` from them, and they are the plausible input to how it assigns `tier`.
+   */
+  identityDataList?: IdentityData[];
+  /**
+   * Onboard into a named credit band, which sets `subTier` to that band's value.
+   *
+   * Ignored when `subTier` is given explicitly. Contracts (`CreditPool`, `JobEscrow`) take no
+   * band: they must custody the asset, never borrow, so they need only clear the asset's own
+   * transfer floor.
+   */
+  band?: BandLabel;
 }
 
 export interface OnboardResult {
@@ -77,7 +91,8 @@ export async function ensureApass(args: OnboardArgs): Promise<OnboardResult> {
     chain,
     kycSource: args.kycSource,
     kycId: args.kycId,
-    subTier: args.subTier,
+    identityDataList: args.identityDataList,
+    subTier: args.subTier ?? (args.band ? getBand(args.band)?.subTier : undefined),
     subGroup: args.subGroup,
   });
 

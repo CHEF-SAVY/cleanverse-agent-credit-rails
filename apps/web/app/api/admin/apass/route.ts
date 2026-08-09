@@ -19,6 +19,7 @@ import {
   canHoldAsset,
   ensureApass,
   type Chain,
+  type IdentityData,
 } from "@/lib/cleanverse";
 
 /** Constant-time compare so the key can't be recovered by timing the endpoint. */
@@ -39,6 +40,8 @@ interface OnboardBody {
   validityDays?: number;
   subTier?: number;
   subGroup?: string;
+  identityDataList?: IdentityData[];
+  kycSource?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -67,6 +70,8 @@ export async function POST(request: NextRequest) {
       validityDays: body.validityDays,
       subTier: body.subTier,
       subGroup: body.subGroup,
+      identityDataList: body.identityDataList,
+      kycSource: body.kycSource,
     });
 
     return NextResponse.json({

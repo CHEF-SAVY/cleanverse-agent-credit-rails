@@ -27,8 +27,16 @@ export type IdType =
 export interface IdentityData {
   idType: IdType;
   fullName: string;
+  /**
+   * ISO-3166-1 alpha-2. **Required** — omitting it fails with
+   * "The issuing country cannot be empty". Cleanverse derives the A-Pass `countries` tags from
+   * these, uppercased and deduplicated across documents.
+   */
+  issuingCountryISO2: string;
   /** The raw number, or its SHA-256 hash in hex — Cleanverse accepts either. */
   idNumber?: string;
+  /** `yyyy-MM-dd`. */
+  validUntil?: string;
 }
 
 export interface GenerateApassArgs {
