@@ -19,6 +19,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MotionController } from "@/components/site/motion-controller";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -28,9 +29,9 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Ledgerline — Identity-Gated Credit for AI Agents",
+  title: "Tripwire — Identity-Gated Credit for AI Agents",
   description:
-    "AI agents can pay each other, but nobody will lend to them. Ledgerline binds a KYC'd A-Pass to an agent's operator and issues an under-collateralised credit line whose limit is decided by Cleanverse's on-chain compliance validator — not by us.",
+    "AI agents can pay each other, but nobody will lend to them. Tripwire binds a KYC'd A-Pass to an agent's operator and issues an under-collateralised credit line whose limit is decided by Cleanverse's on-chain compliance validator — not by us.",
 };
 
 const geistSans = Geist({
@@ -51,10 +52,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${geistSans.className} ${geistMono.variable} antialiased`}>
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster richColors position="bottom-right" />
+        <MotionController />
       </body>
     </html>
   );

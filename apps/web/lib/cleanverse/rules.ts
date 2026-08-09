@@ -66,6 +66,19 @@ function serialise<T>(key: string, task: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/** Structural equality for a rule. Field-by-field so key order and extra fields can't fool it. */
+export function rulesEqual(left: ComplianceRule, right: ComplianceRule): boolean {
+  return (
+    left.allowed_group === right.allowed_group &&
+    left.allowed_sub_group === right.allowed_sub_group &&
+    left.min_tier === right.min_tier &&
+    left.min_sub_tier === right.min_sub_tier &&
+    left.is_black_list === right.is_black_list &&
+    left.countries.length === right.countries.length &&
+    left.countries.every((country, index) => country === right.countries[index])
+  );
+}
+
 export type CountryMode = "restrict" | "allow-only";
 
 /**
@@ -117,11 +130,39 @@ async function applyRule(
   const resolvedChain = chain ?? getCleanverseConfig().defaultChain;
 
   return serialise(address.toLowerCase(), async () => {
-    const { tx_hash: txHash } = await setPoolRule({
-      contractAddress: address,
-      rule,
-      chain: resolvedChain,
-    });
+    let txHash: string;
+    try {
+      ({ tx_hash: txHash } = await setPoolRule({
+        contractAddress: address,
+        rule,
+        chain: resolvedChain,
+      }));
+    } catch (error) {
+      // A rule write is not idempotent and cannot be retried blindly, but a failed *response* does
+      // not mean a failed *write*: the request can be applied on-chain and the connection drop on
+      // the way back. Observed in practice — a restrict reported `fetch failed` and had in fact
+      // taken effect, which is the worst outcome to report wrongly in either direction.
+      //
+      // So ask Cleanverse what the rule actually is before deciding. If it already matches what we
+      // asked for, the write landed and reporting an error would be a lie.
+      const settled = await getPoolRules({ contractAddress: address, chain: resolvedChain })
+        .then((r) => r.rules)
+        .catch(() => null);
+
+      if (settled && settled.length === 1 && rulesEqual(settled[0], rule)) {
+        return {
+          label: band.label,
+          address,
+          // No hash: the response carrying it never arrived. The rule is verified by read-back.
+          txHash: "",
+          rule,
+          rulesAfter: settled,
+          confirmed: true,
+          note: `${note} (the response was lost in transit; the rule was confirmed by reading it back)`,
+        };
+      }
+      throw error;
+    }
 
     // Wait for the write to land before releasing the queue, so a follow-up mutation on this pool
     // cannot race it. A timeout is reported, not thrown: the transaction is already submitted and

@@ -1,0 +1,67 @@
+# Render blueprint — deploys the whole app (UI + API) as one Node web service.
+#
+# There is no separate backend to deploy. Every Cleanverse call lives in Next.js route handlers
+# and server actions under apps/web, so this one service is both the frontend and the backend.
+# That is also why the api-key can stay server-side: it never crosses a network boundary we own.
+#
+# Secrets are declared with `sync: false`, which means Render prompts for them at deploy time and
+# stores them encrypted. Nothing sensitive is committed here — POOL_OWNER_PRIVATE_KEY in
+# particular is a real key that controls the gate contracts.
+
+services:
+  - type: web
+    name: tripwire
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+
+    # corepack pins pnpm to the version in package.json's packageManager field, so the lockfile
+    # is honoured exactly. --frozen-lockfile makes a drifted lockfile fail the build instead of
+    # silently resolving something else.
+    buildCommand: |
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter web build
+    startCommand: pnpm --filter web start
+    healthCheckPath: /api/cleanverse/health
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22.22.2"
+      - key: NODE_ENV
+        value: production
+
+      # ── Cleanverse ────────────────────────────────────────────────────────
+      # api-key is the AES key for request bodies, not a bearer token. Never NEXT_PUBLIC_.
+      - key: CLEANVERSE_API_ID
+        sync: false
+      - key: CLEANVERSE_API_KEY
+        sync: false
+      - key: CLEANVERSE_ENV
+        value: sandbox
+      - key: CLEANVERSE_CHAIN
+        value: monad
+
+      # Guards every policy-changing surface. Unset disables them rather than defaulting open.
+      - key: CLEANVERSE_ADMIN_KEY
+        sync: false
+
+      # ── Chain ─────────────────────────────────────────────────────────────
+      # aUSDC on Monad testnet — verified on-chain (symbol/decimals), safe to pin.
+      - key: ASSET_ADDRESS
+        value: "0xaC0893567D43C3E7e6e35a72803df05416C1f20D"
+      # Registered compliance pools. Changing these without re-registering breaks the gate.
+      - key: GATE_BAND_1
+        value: "0x2695C5795F586136eed2F1007bDD31c2b60943bE"
+      - key: GATE_BAND_2
+        value: "0x4144AF2fdB58e40A9879D3EE449a95b1ecC73591"
+      - key: GATE_BAND_3
+        value: "0x67C37Cbfaa464D430528D9FD5B0a7DDf178BADFa"
+      # Optional: a private Monad RPC. The public endpoint rate-limits under demo load.
+      - key: MONAD_RPC_URL
+        sync: false
+
+      # Owner of the gate contracts; signs validator/register and rule writes. A real private key.
+      - key: POOL_OWNER_PRIVATE_KEY
+        sync: false

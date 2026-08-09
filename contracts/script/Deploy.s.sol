@@ -57,6 +57,19 @@ contract Deploy is Script {
     uint256 constant HISTORY_BONUS_PER_JOB = 100e6;
     uint256 constant MAX_HISTORY_BONUS = 5_000e6;
 
+    /// @dev An existing gate address from the environment, or a freshly deployed one when unset.
+    /// Existing gates are the norm: they are registered with Cleanverse and that registration is
+    /// what gives them meaning.
+    function _gate(string memory envKey, string memory label, address owner) internal returns (CreditTierGate) {
+        address existing = vm.envOr(envKey, address(0));
+        if (existing != address(0)) {
+            console.log("reusing %s at %s", label, existing);
+            return CreditTierGate(existing);
+        }
+        console.log("WARNING: %s not set - deploying a NEW, UNREGISTERED gate", envKey);
+        return new CreditTierGate(label, owner);
+    }
+
     function run() external {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
@@ -75,9 +88,15 @@ contract Deploy is Script {
         // separately, is passed to JobEscrow as the immutable ARBITER — a deliberate choice of
         // a fresh wallet distinct from the buyer/seller demo wallets, so the arbiter is a
         // genuinely separate party from both sides of any dispute it resolves.
-        CreditTierGate band1 = new CreditTierGate("band-1", deployer);
-        CreditTierGate band2 = new CreditTierGate("band-2", deployer);
-        CreditTierGate band3 = new CreditTierGate("band-3", deployer);
+        // Reuse gates that are already registered as Cleanverse compliance pools. Deploying
+        // fresh ones here would produce addresses the validator has never seen, and
+        // complianceVerify fails closed — so every borrower would silently score zero credit
+        // while everything appeared to deploy correctly. Only mint new gates when none are
+        // configured, and remember that new gates must then be registered before they gate
+        // anything.
+        CreditTierGate band1 = _gate("GATE_BAND_1", "band-1", deployer);
+        CreditTierGate band2 = _gate("GATE_BAND_2", "band-2", deployer);
+        CreditTierGate band3 = _gate("GATE_BAND_3", "band-3", deployer);
 
         CreditPool pool = new CreditPool(asset);
         JobEscrow jobEscrow = new JobEscrow(asset, IDENTITY_REGISTRY, VALIDATION_REGISTRY, deployer);
@@ -103,6 +122,8 @@ contract Deploy is Script {
         console.log("TierGate band-3:", address(band3));
         console.log("CCP validator:", validator);
         console.log("Arbiter/Owner:", deployer);
-        console.log("NEXT: register EACH TierGate via validator/grant + validator/register");
+        console.log("NEXT 1: onboard CreditPool + JobEscrow via POST /api/admin/apass");
+        console.log("        aUSDC is recipient-gated; without a pass every transfer reverts.");
+        console.log("NEXT 2: register any NEWLY minted gate via POST /api/admin/pools/register");
     }
 }

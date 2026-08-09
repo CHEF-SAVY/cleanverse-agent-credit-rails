@@ -81,6 +81,23 @@ export interface RequestOptions {
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 /**
+ * Node's fetch reports almost every network problem as a bare `TypeError: fetch failed` and hides
+ * the real reason — ECONNREFUSED, ENOTFOUND, a TLS failure, an aborted signal — one or two levels
+ * down in `cause`. Surfacing only the outer message makes every network fault look identical and
+ * undiagnosable, so unwrap the chain.
+ */
+function describeFetchFailure(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; current instanceof Error && depth < 4; depth++) {
+    const code = (current as NodeJS.ErrnoException).code;
+    parts.push(code ? `${current.message} (${code})` : current.message);
+    current = (current as { cause?: unknown }).cause;
+  }
+  return parts.join(" ← ") || "request failed";
+}
+
+/**
  * Some encrypted endpoints return a plaintext envelope anyway (notably errors, which are emitted
  * before the handler decides to encrypt). Detect ciphertext rather than assuming.
  */
@@ -143,7 +160,7 @@ async function sendOnce<TResponse, TRequest>(
     });
   } catch (cause) {
     throw new CleanverseTransportError({
-      message: cause instanceof Error ? cause.message : "request failed",
+      message: describeFetchFailure(cause),
       endpoint,
       requestId,
       cause,

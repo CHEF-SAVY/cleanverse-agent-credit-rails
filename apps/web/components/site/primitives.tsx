@@ -20,7 +20,7 @@ export function Frame({ children, className }: { children: ReactNode; className?
 /** Small bordered pill that names a section. The reference's "× THE PROBLEM" marker. */
 export function Eyebrow({ children, icon }: { children: ReactNode; icon?: string }) {
   return (
-    <span className="mono-label inline-flex items-center gap-2 border border-red/40 px-3 py-1.5 text-red">
+    <span className="mono-label inline-flex items-center gap-2 border border-red/40 px-2.5 py-1 text-red">
       {icon ? <span aria-hidden>{icon}</span> : null}
       {children}
     </span>
@@ -42,17 +42,18 @@ export function SectionHeading({
 }) {
   return (
     <div
+      data-reveal
       className={cn(
-        "px-6 py-16 sm:px-10 md:py-24",
+        "px-5 py-12 sm:px-8 md:py-16",
         align === "center" ? "text-center" : "text-left",
       )}
     >
       <Eyebrow icon={icon}>{eyebrow}</Eyebrow>
-      <h2 className="display mt-7 text-4xl text-white sm:text-5xl md:text-6xl">{title}</h2>
+      <h2 className="display mt-5 text-3xl text-white sm:text-4xl md:text-[2.75rem]">{title}</h2>
       {lede ? (
         <p
           className={cn(
-            "mt-6 text-base leading-relaxed text-white/55 sm:text-lg",
+            "mt-4 text-sm leading-relaxed text-white/55 sm:text-base",
             align === "center" ? "mx-auto max-w-2xl" : "max-w-2xl",
           )}
         >
@@ -73,8 +74,9 @@ export function Cell({
 }) {
   return (
     <div
+      data-reveal
       className={cn(
-        "group border-t border-l border-white/[0.09] p-7 transition-colors duration-300 hover:bg-white/[0.02] sm:p-9",
+        "group border-t border-l border-white/[0.09] p-5 transition-colors duration-300 hover:bg-white/[0.02] sm:p-6",
         className,
       )}
     >
@@ -98,7 +100,7 @@ export function Node({
   return (
     <div
       className={cn(
-        "flex min-w-[8.5rem] flex-col items-center justify-center border px-4 py-3 text-center",
+        "flex min-w-[7rem] flex-col items-center justify-center border px-3 py-2.5 text-center",
         tone === "red" && "border-red/50 bg-red/[0.06]",
         tone === "live" && "border-emerald-400/40 bg-emerald-400/[0.05]",
         tone === "neutral" && "border-white/15 bg-white/[0.02]",
