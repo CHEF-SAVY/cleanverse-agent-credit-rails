@@ -30,3 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 coverage/
+
+# Internal working docs — team-facing, not part of the public submission.
+# Note: these remain in git history from earlier commits; untracking only stops future changes.
+CLAUDE.md
+CODEX.md
+HANDOFF.md
+DEMO.md
