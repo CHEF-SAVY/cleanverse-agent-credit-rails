@@ -32,6 +32,33 @@ Nothing deploys until this has gas.
 
 ## 2. Questions for Cleanverse — genuinely blocking
 
+### 🚨 Q0 (NEW, 2026-08-10). Cleanverse's own validator signer is out of gas on Monad
+
+`POST /validator/set_rule` now fails on every call:
+
+```
+code 0002 — [12026] SetComplianceRule failed: set validator rule:
+Signer had insufficient balance
+```
+
+**This is on Cleanverse's side, not ours.** The signer is the relayer key Cleanverse uses to
+submit validator writes — we never sign those transactions, we only supply an EIP-191 ownership
+proof at `grant`/`register` time. Evidence:
+
+- Our deployer `0xC2Ce96f61a40B54C74f30f1Da73E3b8dcf3e2A2c` holds **4.83 MON** and its nonce is
+  **4** — four deploys, and not one transaction sent to the validator. It has never paid for a
+  rule write and is not short of gas.
+- The same endpoint succeeded repeatedly on 2026-08-09 with the identical payload and credentials;
+  nothing changed on our side between then and now.
+
+**Ask Cleanverse to top up the Monad UAT validator signer with MON.** We are happy to fund it
+directly if they tell us the address — we have testnet MON to spare.
+
+**Blast radius:** rule *writes* only. Everything else is unaffected — `verify`, `rules`,
+`is_register`, `is_paused`, A-Pass queries and the on-chain `complianceVerify` all answer
+normally, so credit decisions still run live end to end. What is blocked is the 1:50 demo beat
+(*restrict band-2 to GB*), which is the single most persuasive moment we have.
+
 ### ~~Q1. Where is `IAPassComplianceValidator` deployed?~~ ✅ FOUND IT OURSELVES
 
 **`0xaC7e5179C2C7f03f209136886c172eb34F161792` on Monad testnet (chain 10143).**
