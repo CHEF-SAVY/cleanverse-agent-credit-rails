@@ -32,7 +32,49 @@ Nothing deploys until this has gas.
 
 ## 2. Questions for Cleanverse — genuinely blocking
 
-### Q1. Where is `IAPassComplianceValidator` deployed, and is Monad among them? 🚨
+### 🚨 Q0 (NEW, 2026-08-10). Cleanverse's own validator signer is out of gas on Monad
+
+`POST /validator/set_rule` now fails on every call:
+
+```
+code 0002 — [12026] SetComplianceRule failed: set validator rule:
+Signer had insufficient balance
+```
+
+**This is on Cleanverse's side, not ours.** The signer is the relayer key Cleanverse uses to
+submit validator writes — we never sign those transactions, we only supply an EIP-191 ownership
+proof at `grant`/`register` time. Evidence:
+
+- Our deployer `0xC2Ce96f61a40B54C74f30f1Da73E3b8dcf3e2A2c` holds **4.83 MON** and its nonce is
+  **4** — four deploys, and not one transaction sent to the validator. It has never paid for a
+  rule write and is not short of gas.
+- The same endpoint succeeded repeatedly on 2026-08-09 with the identical payload and credentials;
+  nothing changed on our side between then and now.
+
+**Ask Cleanverse to top up the Monad UAT validator signer with MON.** We are happy to fund it
+directly if they tell us the address — we have testnet MON to spare.
+
+**Blast radius:** rule *writes* only. Everything else is unaffected — `verify`, `rules`,
+`is_register`, `is_paused`, A-Pass queries and the on-chain `complianceVerify` all answer
+normally, so credit decisions still run live end to end. What is blocked is the 1:50 demo beat
+(*restrict band-2 to GB*), which is the single most persuasive moment we have.
+
+### ~~Q1. Where is `IAPassComplianceValidator` deployed?~~ ✅ FOUND IT OURSELVES
+
+**`0xaC7e5179C2C7f03f209136886c172eb34F161792` on Monad testnet (chain 10143).**
+
+Recovered without Cleanverse: `validator/set_rule` returns a `tx_hash`, and that
+transaction is sent *to* the validator. Reading the `to` field off the receipt gives the
+address directly. Verified before trusting it — `isRegistered` returns true for all three
+registered gates, `complianceVerify` reproduces the REST API's verdicts exactly
+(true/true/false for a subTier-40 wallet), and `getRulesV2(band-2)` returns
+`(0x0000, 0x0000, 20, 40, 0)` — our band-2 rule, on the nose.
+
+Monad **is** supported by the on-chain validator, settling the chain conflict too.
+
+*Original question, kept for the reasoning:*
+
+### Q1 (superseded). Where is `IAPassComplianceValidator` deployed? 🚨
 
 **This is the one that can sink the architecture.** We need a `CCP_VALIDATOR_ADDRESS` for
 `Deploy.s.sol`, and it does not exist in anything we've been given:
@@ -51,11 +93,10 @@ be looking at Base instead.
 **Ask:** the deployed address of `IAPassComplianceValidator` on every chain it lives on. If Monad
 testnet is not one of them, say so explicitly.
 
-### Q2. Do we have **Issue Member** role on api-id `APP20260614112550LIDZXM`?
+### ~~Q2. Do we have **Issue Member** role?~~ ✅ ANSWERED BY DOING IT — yes
 
-Validator Compliance is Issue-Member-only. Gateway Member would let `generate_apass` and
-`query_apass` succeed and then fail us at `validator/grant` / `register` — late, and during the
-demo. Worth confirming before we build against it rather than discovering it at 3am.
+Registered all three credit-band gates via `POST /validator/register` on 2026-08-09, which is
+Issue-Member-only. All three succeeded and carry their rules. No need to ask.
 
 ### ~~Q3. Is a testnet A-Token actually reachable on Monad?~~ ✅ ANSWERED OURSELVES
 
@@ -111,6 +152,30 @@ checked against the CCP guide and match it exactly, so this isn't a transcriptio
 side. These are the A-Token engine and the A-Pass registry, not the compliance validator.
 
 **So Q1 cannot be answered by inspection. We still need the address from Cleanverse.**
+
+---
+
+## 3b. Worth reporting back to Cleanverse — `is_black_list` does nothing on-chain
+
+Not a blocker for us (we use the allow-list form), but it is a silent failure and they will
+probably want to know.
+
+Setting a validator rule with `is_black_list: true, countries: ["NG"]`:
+
+- `POST /validator/set_rule` returns `0000` and a tx hash
+- the transaction **confirms on-chain**
+- `POST /validator/rules` reads the rule back exactly as submitted
+- and an operator whose A-Pass carries `countries: ["NG"]` **still passes `validator/verify`**
+
+The same band switched to `is_black_list: false, countries: ["GB"]` denies that operator
+immediately, so the country data and the rule plumbing both work — only the deny-list *semantics*
+are absent.
+
+Consistent with `RuleV2.poolCountryBitmap` superseding the legacy pair: a bitwise AND against a
+bitmap of permitted countries expresses an allow-list naturally and a deny-list not at all. The
+API accepting a flag it cannot honour is the problem — an error would be far safer than silence.
+
+Measured on Monad testnet, 2026-08-09.
 
 ---
 

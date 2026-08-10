@@ -26,31 +26,31 @@
    indirection (bg-background, text-muted-foreground, etc. via @theme inline below), so
    this cascades app-wide with no per-component changes needed. */
 :root {
-  --background: 240 6% 6%;
+  --background: 0 0% 4.3%;
   --foreground: 0 0% 98%;
-  --card: 240 6% 9%;
+  --card: 0 0% 6.5%;
   --card-foreground: 0 0% 98%;
-  --popover: 240 6% 9%;
+  --popover: 0 0% 6.5%;
   --popover-foreground: 0 0% 98%;
-  --primary: 217 91% 60%;
+  --primary: 3 74% 56%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 6% 14%;
+  --secondary: 0 0% 11%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 240 6% 12%;
-  --muted-foreground: 240 5% 65%;
-  --accent: 240 6% 14%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 58%;
+  --accent: 0 0% 11%;
   --accent-foreground: 0 0% 98%;
-  --destructive: 0 84% 60%;
+  --destructive: 3 74% 56%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 6% 18%;
-  --input: 240 6% 18%;
-  --ring: 217 91% 60%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 3 74% 56%;
   --chart-1: 217 91% 60%;
   --chart-2: 0 84% 60%;
   --chart-3: 150.98 75.41% 47.84%;
   --chart-4: 21.9 100% 73.14%;
   --chart-5: 294.95 88.43% 76.27%;
-  --radius: 0.5rem;
+  --radius: 0rem;
 }
 
 @theme inline {
@@ -91,3 +91,314 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design system — "compliance terminal"
+
+   Near-black canvas, one saturated red, hairline rules, and monospace for
+   anything machine-spoken (labels, addresses, verdicts). Display type is set
+   tight and large; body copy stays quiet so the numbers carry the page.
+
+   Corners are square everywhere (--radius: 0). Rounding softens this language.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --color-red: #e2413b;
+  --color-red-bright: #f0554e;
+  --color-ink: #0b0a0a;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  --red: #e2413b;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --frame-max: 1120px;
+  --pointer-x: 68vw;
+  --pointer-y: 28vh;
+}
+
+/* The bordered content column from the reference: a fixed-width frame with
+   visible vertical rules, so every section reads as one continuous document. */
+.frame {
+  max-width: var(--frame-max);
+  margin-inline: auto;
+  border-inline: 1px solid var(--hairline);
+}
+
+/* Machine voice: eyebrows, labels, addresses, verdicts. */
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Display headline: tight tracking, optical weight. */
+.display {
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-weight: 500;
+}
+
+/* Hero panel — flat red with a fine horizontal scanline, echoing the reference's
+   printed/CRT texture without an image asset. */
+.hero-red {
+  background-color: var(--red);
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.055) 0px,
+    rgba(0, 0, 0, 0.055) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* Hard-offset shadow on primary actions — the reference's "printed sticker" button. */
+.btn-hard {
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.85);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.btn-hard:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 rgba(0, 0, 0, 0.85);
+}
+.btn-hard:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 rgba(0, 0, 0, 0.85);
+}
+
+/* Ticker strip under the hero. Duplicated content + 50% translation = seamless. */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker 38s linear infinite;
+  will-change: transform;
+}
+
+/* Section entrances. Kept to opacity + a short rise: this page is dense, and
+   anything more emphatic reads as decoration. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.pulse-dot { animation: pulse-dot 1.9s ease-in-out infinite; }
+
+/* ── Ambient field ──────────────────────────────────────────────────────────
+   The page reacts like a live system without pretending that decorative data is real. A pointer-
+   steered red light, a slow secondary glow and a drifting dot field sit behind the actual UI.
+   Content always stays above this layer and the contrast remains intentionally low. */
+.ambient-page {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: #0b0a0a;
+}
+.ambient-page > * {
+  position: relative;
+  z-index: 1;
+}
+.ambient-page::before,
+.ambient-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.ambient-page::before {
+  background:
+    radial-gradient(34rem circle at var(--pointer-x) var(--pointer-y), rgba(226, 65, 59, 0.075), transparent 72%),
+    radial-gradient(42rem circle at 18% 72%, rgba(226, 65, 59, 0.035), transparent 75%);
+  animation: ambient-breathe 12s ease-in-out infinite alternate;
+}
+.ambient-page::after {
+  opacity: 0.18;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 0.7px, transparent 0.8px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, transparent 2%, black 24%, black 82%, transparent 100%);
+  animation: ambient-grid 34s linear infinite;
+}
+
+@keyframes ambient-breathe {
+  from { opacity: 0.72; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1.035); }
+}
+@keyframes ambient-grid {
+  to { background-position: 56px 28px; }
+}
+
+/* The red hero gets its own slow light pass. It follows the same pointer variables but uses
+   multiply so black type never loses contrast. */
+.hero-red::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(28rem circle at var(--pointer-x) var(--pointer-y), rgba(255, 255, 255, 0.14), transparent 70%),
+    linear-gradient(115deg, transparent 36%, rgba(0, 0, 0, 0.08) 50%, transparent 64%);
+  mix-blend-mode: soft-light;
+  animation: hero-light-pass 13s ease-in-out infinite alternate;
+}
+.hero-red > * { z-index: 1; }
+@keyframes hero-light-pass {
+  from { transform: translate3d(-3%, -2%, 0); }
+  to { transform: translate3d(5%, 3%, 0); }
+}
+
+/* System brief: an illustrative execution sequence, not fabricated telemetry. */
+.system-brief {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.055);
+  animation: panel-float 7s ease-in-out infinite;
+}
+.system-brief::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -20%;
+  height: 22%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: panel-scan 6s linear infinite;
+}
+.system-brief-row { transition: background-color 240ms ease, padding-left 240ms ease; }
+.system-brief-row:hover { padding-left: 1.25rem; background: rgba(0, 0, 0, 0.035); }
+.sequence-step::after {
+  content: "";
+  width: 0.3rem;
+  height: 0.3rem;
+  margin-top: 0.15rem;
+  background: rgba(0, 0, 0, 0.22);
+  animation: sequence-signal 4.8s ease-in-out infinite;
+}
+.sequence-step:nth-child(2)::after { animation-delay: 1.2s; }
+.sequence-step:nth-child(3)::after { animation-delay: 2.4s; }
+.sequence-step:nth-child(4)::after { animation-delay: 3.6s; }
+@keyframes panel-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes panel-scan {
+  to { top: 110%; }
+}
+@keyframes sequence-signal {
+  0%, 22%, 100% { background: rgba(0, 0, 0, 0.2); transform: scale(1); }
+  8% { background: rgba(0, 0, 0, 0.9); transform: scale(1.45); }
+}
+
+/* Native view timelines provide scroll entrances without client-side class mutations. Browsers
+   without the feature simply render the content in place. */
+@keyframes reveal-on-view {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@supports (animation-timeline: view()) {
+  [data-reveal] {
+    animation: reveal-on-view linear both;
+    animation-timeline: view();
+    animation-range: entry 2% cover 20%;
+  }
+  .reveal-delay-1 { animation-range: entry 5% cover 23%; }
+  .reveal-delay-2 { animation-range: entry 8% cover 26%; }
+  .reveal-delay-3 { animation-range: entry 11% cover 29%; }
+}
+
+/* The desktop authority chain carries one signal from identity to credit. */
+.flow-node {
+  animation: flow-node-signal 8.4s ease-in-out infinite;
+  animation-delay: var(--flow-delay, 0s);
+}
+.flow-node-1 { --flow-delay: 0s; }
+.flow-node-2 { --flow-delay: 1s; }
+.flow-node-3 { --flow-delay: 2s; }
+.flow-node-4 { --flow-delay: 3s; }
+.flow-node-5 { --flow-delay: 4s; }
+.flow-node-6 { --flow-delay: 5s; }
+.flow-wire {
+  position: relative;
+  overflow: hidden;
+}
+.flow-wire::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(226, 65, 59, 0.85), transparent);
+  transform: translateX(-110%);
+  animation: wire-signal 4.2s linear infinite;
+}
+@keyframes flow-node-signal {
+  0%, 12%, 100% { filter: brightness(1); box-shadow: none; }
+  5% { filter: brightness(1.45); box-shadow: 0 0 24px rgba(226, 65, 59, 0.09); }
+}
+@keyframes wire-signal {
+  48%, 100% { transform: translateX(110%); }
+}
+
+/* A real verdict gets the strongest persistent movement: a restrained scan within its border. */
+.verdict-live,
+.decision-trace {
+  position: relative;
+  overflow: hidden;
+}
+.verdict-live::before,
+.decision-trace::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(226, 65, 59, 0.13), transparent);
+  animation: verdict-scan 5.5s ease-in-out infinite;
+}
+.verdict-live::before { inset: 0; transform: translateX(-120%); }
+.decision-trace::after { inset-block: 0; left: 0; width: 28%; transform: translateX(-120%); }
+@keyframes verdict-scan {
+  0%, 18% { transform: translateX(-120%); }
+  58%, 100% { transform: translateX(420%); }
+}
+
+.wallet-active {
+  position: relative;
+  overflow: hidden;
+}
+.wallet-active::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: -35%;
+  width: 30%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(226, 65, 59, 0.13), transparent);
+  animation: wallet-signal 4.8s ease-in-out infinite;
+}
+@keyframes wallet-signal {
+  0%, 25% { transform: translateX(0); }
+  70%, 100% { transform: translateX(460%); }
+}
+
+/* Respect the OS setting — motion here is decorative, never load-bearing. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track, .rise, .pulse-dot, .ambient-page::before, .ambient-page::after,
+  .hero-red::before, .system-brief, .system-brief::after, .sequence-step::after,
+  .flow-node, .flow-wire::after, .verdict-live::before, .decision-trace::after,
+  .wallet-active::after {
+    animation: none !important;
+  }
+  .btn-hard { transition: none; }
+}
+
+::selection { background: var(--red); color: #fff; }
+
+html { scroll-behavior: smooth; }

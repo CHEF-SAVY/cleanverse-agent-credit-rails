@@ -1,2 +1,5 @@
 packages:
   - "apps/*"
+allowBuilds:
+  # Native resolver used by eslint; it runs fine without its postinstall build.
+  unrs-resolver: false

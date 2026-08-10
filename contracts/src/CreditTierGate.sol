@@ -11,8 +11,13 @@ pragma solidity ^0.8.24;
 /// This is how an on-chain credit limit gets sized by an off-chain KYC tier without an oracle,
 /// an attestation, or a trusted key: the CCP guide's own "one authorization, batch-manage
 /// multiple pools … high-tier express lanes" pattern, used for lending instead of a DEX.
-/// Registering three of these with `minTier` 20 / 40 / 60 gives three credit bands, and moving
-/// a band is a rule change on Cleanverse's side — no redeploy here.
+/// Registering three of these, each against a different rule, gives three credit bands, and
+/// moving a band is a rule change on Cleanverse's side — no redeploy here.
+///
+/// The live bands gate on `minSubTier` (10 / 40 / 80) rather than `minTier`, because every
+/// A-Pass the sandbox issues comes back at tier 50 regardless of the KYC submitted — measured
+/// across seven passes — so `minTier` alone cannot separate three bands. See
+/// `apps/web/lib/cleanverse/bands.ts` for the rule each label carries.
 ///
 /// `owner()` exists because CCP registration requires an EIP-191 signature from the subject
 /// contract's owner over `keccak256(chain + contract_address)`; without it the gate could never
