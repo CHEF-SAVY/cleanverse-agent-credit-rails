@@ -2,6 +2,9 @@
 
 **Track:** DeFi & Verified Finance · **Chain:** Monad testnet (10143) · **Settlement asset:** aUSDC
 
+**Live demo:** https://cleanverse-agent-credit-rails.vercel.app
+**Source:** https://github.com/CHEF-SAVY/cleanverse-agent-credit-rails
+
 ---
 
 ## The problem
@@ -120,7 +123,21 @@ Base is a cheap next step rather than a rewrite.
 
 ---
 
+## Known limitation at time of submission
+
+Cleanverse's `validator/set_rule` is currently returning `[12026] Signer had insufficient balance`
+— the relayer key Cleanverse uses to submit validator writes is out of gas on Monad testnet. We
+never sign those transactions ourselves; we supply an EIP-191 ownership proof and Cleanverse
+submits. Our own deployer holds 4.83 MON and has never sent a transaction to the validator.
+
+This affects **rule writes only**. Every read path — `validator/verify`, `rules`, `is_register`,
+A-Pass queries, and the on-chain `complianceVerify` — answers normally, so credit decisions still
+run live end to end. Reported upstream, with an offer to fund the signer directly.
+
+---
+
 ## Try it
 
 - **`/`** — the story: problem, architecture, credit ladder
 - **`/live`** — a real credit decision, and the rule change that moves it
+- **`/api/cleanverse/health`** — four live checks: credentials, encryption, API, settlement asset
